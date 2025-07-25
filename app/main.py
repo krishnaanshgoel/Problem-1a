@@ -1,21 +1,25 @@
 import os
 import json
-from app.pdf_outline_extractor import extract_outline
+from pathlib import Path
+from app.pdf_outline_extractor import PDFOutlineExtractor
+from multiprocessing import Pool, cpu_count
 
-INPUT_DIR = "/app/input"
-OUTPUT_DIR = "/app/output"
+INPUT_DIR = "/app/input" if os.path.exists("/app/input") else "input"
+OUTPUT_DIR = "/app/output" if os.path.exists("/app/output") else "output"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "pdf_outline_extractor.py")
+
+def process_pdf(pdf_file):
+    extractor = PDFOutlineExtractor()
+    result = extractor.extract(pdf_file)
+    output_file = os.path.join(OUTPUT_DIR, f"{Path(pdf_file).stem}.json")
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
 
 def main():
-    for filename in os.listdir(INPUT_DIR):
-        if filename.lower().endswith(".pdf"):
-            pdf_path = os.path.join(INPUT_DIR, filename)
-            output_path = os.path.join(OUTPUT_DIR, filename[:-4] + ".json")
-            try:
-                outline = extract_outline(pdf_path)
-                with open(output_path, "w", encoding="utf-8") as f:
-                    json.dump(outline, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
+    pdf_files = [os.path.join(INPUT_DIR, f) for f in os.listdir(INPUT_DIR) if f.lower().endswith(".pdf")]
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with Pool(min(cpu_count(), 8)) as pool:
+        pool.map(process_pdf, pdf_files)
 
 if __name__ == "__main__":
     main() 
