@@ -35,6 +35,6 @@ for fname in files:
             for line in diff:
                 print('   ', line)
 if all_match:
-    print("\nAll outputs match the sample outputs! 🎉")
+    print("\nAll outputs match the sample outputs!")
 else:
     print("\nSome outputs differ from the sample outputs. See above for details.") 
