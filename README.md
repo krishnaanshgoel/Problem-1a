@@ -124,22 +124,6 @@ For each input PDF, a corresponding JSON file is generated in the `output/` dire
   - **text**: Heading text content
   - **page**: Page number where the heading appears
 
-## Configuration
-
-### Key Parameters
-- `MIN_HEADING_LEN`: Minimum character length for headings (default: 8)
-- `MIN_HEADING_WORDS`: Minimum word count for headings (default: 2)
-- `MERGE_DIST_Y`: Maximum vertical distance for merging headings (default: 10)
-- `MERGE_DIST_X`: Maximum horizontal distance for merging headings (default: 30)
-
-### Customization
-Modify parameters in `app/pdf_outline_extractor.py` to adjust extraction behavior:
-```python
-MIN_HEADING_LEN = 8      # Adjust minimum heading length
-MIN_HEADING_WORDS = 2    # Adjust minimum word count
-MERGE_DIST_Y = 10        # Adjust vertical merge distance
-MERGE_DIST_X = 30        # Adjust horizontal merge distance
-```
 
 ## Testing & Validation
 
@@ -166,12 +150,6 @@ The project includes a comprehensive sample dataset with:
    # Use a JSON schema validator to check output against schema
    ```
 
-## Performance Characteristics
-- **Processing Speed**: ~10 seconds for a 50-page PDF
-- **Memory Usage**: Minimal memory footprint
-- **Accuracy**: High accuracy for well-structured documents
-- **Scalability**: Processes multiple files sequentially
-
 ## Advanced Features
 
 ### Machine Learning Model
@@ -194,37 +172,3 @@ The system uses multiple strategies for heading level detection:
 - **Pattern Matching**: Recognition of common heading patterns
 - **Position Analysis**: Consideration of text positioning and alignment
 
-## Troubleshooting
-
-### Common Issues
-1. **No output generated**: Check that PDF files are in the `input/` directory
-2. **Empty outlines**: PDF may contain only images or scanned content
-3. **Incorrect heading levels**: Adjust font size thresholds in configuration
-4. **Docker permission errors**: Ensure proper volume mounting permissions
-
-### Debug Mode
-Enable verbose logging by modifying the main script to include debug output.
-
-## Dependencies
-- **PyMuPDF (fitz)**: PDF parsing and text extraction
-- **NumPy**: Numerical computations and array operations
-- **Joblib**: Machine learning model serialization (optional)
-
-## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
-
-## License
-[Add your license information here]
-
-## Contact
-For questions, issues, or contributions, please contact the development team.
-
-## Version History
-- **v1.0**: Initial release with basic PDF outline extraction
-- **v1.1**: Added machine learning model for enhanced heading detection
-- **v1.2**: Improved text processing and heading merging algorithms
-- **v1.3**: Added Docker support and comprehensive testing framework 
