@@ -29,9 +29,29 @@ class PDFOutlineExtractor:
 
     def _detect_heading_level(self, span, all_spans):
         """Detect heading level based on font size and other features"""
-        text = span['text']
+        text = span['text'].strip()
         size = span['size']
         
+        # Skip very short text that's unlikely to be a heading
+        if len(text) < 3:
+            return None
+            
+        # Skip common non-heading text
+        if text.lower() in ['page', 'of', 'and', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by']:
+            return None
+        
+        # Try to use ML model first if available
+        if self.model is not None:
+            try:
+                features = extract_features(span, all_spans)
+                prediction = self.model.predict([features])[0]
+                if prediction != 'O':  # 'O' means not a heading
+                    return prediction
+            except Exception as e:
+                # Fall back to rule-based approach if ML fails
+                pass
+        
+        # Rule-based fallback approach
         # Get all font sizes for relative comparison
         all_sizes = sorted(set(s['size'] for s in all_spans), reverse=True)
         
@@ -47,10 +67,20 @@ class PDFOutlineExtractor:
                 return "H3"
         
         # Check for specific heading patterns
-        if text.strip().lower() in ['revision history', 'table of contents', 'acknowledgements', 'references']:
+        if text.strip().lower() in ['revision history', 'table of contents', 'acknowledgements', 'references', 'summary', 'background', 'introduction', 'conclusion']:
             return "H1"
         
-        # Use font size ranking
+        # Check for all caps text (likely headings)
+        if text.isupper() and len(text) > 3:
+            if len(all_sizes) >= 2:
+                if size == all_sizes[0]:
+                    return "H1"
+                elif size == all_sizes[1]:
+                    return "H2"
+            else:
+                return "H1"
+        
+        # Use font size ranking with more sophisticated logic
         if len(all_sizes) >= 3:
             if size == all_sizes[0]:
                 return "H1"
@@ -64,7 +94,9 @@ class PDFOutlineExtractor:
             elif size == all_sizes[1]:
                 return "H2"
         elif len(all_sizes) == 1:
-            return "H1"
+            # If only one font size, check if text looks like a heading
+            if len(text) >= 5 and not text.isdigit():
+                return "H1"
         
         return None
 
@@ -102,79 +134,6 @@ class PDFOutlineExtractor:
             if 'x' in h:
                 del h['x']
         
-        # File-specific overrides for perfect sample match
-        if filename is not None:
-            if filename == 'file01.pdf':
-                return []
-            if filename == 'file05.pdf':
-                return [{"level": "H1", "text": "HOPE To SEE You THERE! ", "page": 0}]
-            if filename == 'file02.pdf':
-                return [
-                    {"level": "H1", "text": "Revision History ", "page": 2},
-                    {"level": "H1", "text": "Table of Contents ", "page": 3},
-                    {"level": "H1", "text": "Acknowledgements ", "page": 4},
-                    {"level": "H1", "text": "1. Introduction to the Foundation Level Extensions ", "page": 5},
-                    {"level": "H1", "text": "2. Introduction to Foundation Level Agile Tester Extension ", "page": 6},
-                    {"level": "H2", "text": "2.1 Intended Audience ", "page": 6},
-                    {"level": "H2", "text": "2.2 Career Paths for Testers ", "page": 6},
-                    {"level": "H2", "text": "2.3 Learning Objectives ", "page": 6},
-                    {"level": "H2", "text": "2.4 Entry Requirements ", "page": 7},
-                    {"level": "H2", "text": "2.5 Structure and Course Duration ", "page": 7},
-                    {"level": "H2", "text": "2.6 Keeping It Current ", "page": 8},
-                    {"level": "H1", "text": "3. Overview of the Foundation Level Extension – Agile TesterSyllabus ", "page": 9},
-                    {"level": "H2", "text": "3.1 Business Outcomes ", "page": 9},
-                    {"level": "H2", "text": "3.2 Content ", "page": 9},
-                    {"level": "H1", "text": "4. References ", "page": 11},
-                    {"level": "H2", "text": "4.1 Trademarks ", "page": 11},
-                    {"level": "H2", "text": "4.2 Documents and Web Sites ", "page": 11}
-                ]
-            if filename == 'file03.pdf':
-                return [
-                    {"level": "H1", "text": "Ontario's Digital Library ", "page": 1},
-                    {"level": "H1", "text": "A Critical Component for Implementing Ontario's Road Map to Prosperity Strategy ", "page": 1},
-                    {"level": "H2", "text": "Summary ", "page": 1},
-                    {"level": "H3", "text": "Timeline: ", "page": 1},
-                    {"level": "H2", "text": "Background ", "page": 2},
-                    {"level": "H3", "text": "Equitable access for all Ontarians: ", "page": 3},
-                    {"level": "H3", "text": "Shared decision-making and accountability: ", "page": 3},
-                    {"level": "H3", "text": "Shared governance structure: ", "page": 3},
-                    {"level": "H3", "text": "Shared funding: ", "page": 3},
-                    {"level": "H3", "text": "Local points of entry: ", "page": 4},
-                    {"level": "H3", "text": "Access: ", "page": 4},
-                    {"level": "H3", "text": "Guidance and Advice: ", "page": 4},
-                    {"level": "H3", "text": "Training: ", "page": 4},
-                    {"level": "H3", "text": "Provincial Purchasing & Licensing: ", "page": 4},
-                    {"level": "H3", "text": "Technological Support: ", "page": 4},
-                    {"level": "H3", "text": "What could the ODL really mean? ", "page": 4},
-                    {"level": "H4", "text": "For each Ontario citizen it could mean: ", "page": 4},
-                    {"level": "H4", "text": "For each Ontario student it could mean: ", "page": 4},
-                    {"level": "H4", "text": "For each Ontario library it could mean: ", "page": 5},
-                    {"level": "H4", "text": "For the Ontario government it could mean: ", "page": 5},
-                    {"level": "H2", "text": "The Business Plan to be Developed ", "page": 5},
-                    {"level": "H3", "text": "Milestones ", "page": 6},
-                    {"level": "H2", "text": "Approach and Specific Proposal Requirements ", "page": 6},
-                    {"level": "H2", "text": "Evaluation and Awarding of Contract ", "page": 7},
-                    {"level": "H2", "text": "Appendix A: ODL Envisioned Phases & Funding ", "page": 8},
-                    {"level": "H3", "text": "Phase I: Business Planning ", "page": 8},
-                    {"level": "H3", "text": "Phase II: Implementing and Transitioning ", "page": 8},
-                    {"level": "H3", "text": "Phase III: Operating and Growing the ODL ", "page": 8},
-                    {"level": "H2", "text": "Appendix B: ODL Steering Committee Terms of Reference ", "page": 10},
-                    {"level": "H3", "text": "1. Preamble ", "page": 10},
-                    {"level": "H3", "text": "2. Terms of Reference ", "page": 10},
-                    {"level": "H3", "text": "3. Membership ", "page": 10},
-                    {"level": "H3", "text": "4. Appointment Criteria and Process ", "page": 11},
-                    {"level": "H3", "text": "5. Term ", "page": 11},
-                    {"level": "H3", "text": "6. Chair ", "page": 11},
-                    {"level": "H3", "text": "7. Meetings ", "page": 11},
-                    {"level": "H3", "text": "8. Lines of Accountability and Communication ", "page": 11},
-                    {"level": "H3", "text": "9. Financial and Administrative Policies ", "page": 12},
-                    {"level": "H2", "text": "Appendix C: ODL's Envisioned Electronic Resources ", "page": 13}
-                ]
-            if filename == 'file04.pdf':
-                return [
-                    {"level": "H1", "text": "PATHWAY OPTIONS", "page": 0}
-                ]
-        
         return unique_merged
 
     def extract(self, pdf_path):
@@ -191,9 +150,16 @@ class PDFOutlineExtractor:
                             text = clean_text(span['text'])
                             if not text.strip():
                                 continue
-                            # Filter out page numbers, dates, common footers
-                            if is_page_number(text) or is_date(text) or is_common_footer(text):
+                            
+                            # Enhanced filtering for better noise reduction
+                            if (is_page_number(text) or 
+                                is_date(text) or 
+                                is_common_footer(text) or
+                                len(text.strip()) < 2 or
+                                text.strip().isdigit() or
+                                text.strip().lower() in ['page', 'of', 'total']):
                                 continue
+                                
                             spans.append({
                                 'text': text,
                                 'size': span['size'],
@@ -209,20 +175,8 @@ class PDFOutlineExtractor:
         first_page_spans = [s for s in spans if s['page'] == 0]
         title = ""
         if first_page_spans:
-            # For file05.pdf, use specific title
-            if os.path.basename(pdf_path) == 'file05.pdf':
-                title = ""
-            elif os.path.basename(pdf_path) == 'file01.pdf':
-                title = "Application form for grant of LTC advance  "
-            elif os.path.basename(pdf_path) == 'file02.pdf':
-                title = "Overview  Foundation Level Extensions  "
-            elif os.path.basename(pdf_path) == 'file03.pdf':
-                title = "RFP:Request for Proposal To Present a Proposal for Developing the Business Plan for the Ontario Digital Library  "
-            elif os.path.basename(pdf_path) == 'file04.pdf':
-                title = "Parsippany -Troy Hills STEM Pathways"
-            else:
-                title_span = max(first_page_spans, key=lambda s: s['size'])
-                title = self._normalize_text(title_span['text'])
+            title_span = max(first_page_spans, key=lambda s: s['size'])
+            title = self._normalize_text(title_span['text'])
         
         # Detect headings using font size and other features
         outline = []
@@ -238,7 +192,7 @@ class PDFOutlineExtractor:
                 })
         
         # Post-process to filter/merge/suppress false positives
-        outline = self._postprocess_headings(outline, filename=os.path.basename(pdf_path))
+        outline = self._postprocess_headings(outline)
         
         return {
             "title": title,
