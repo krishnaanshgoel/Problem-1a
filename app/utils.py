@@ -1,6 +1,6 @@
 import re
 import numpy as np
-from joblib import load
+import os
 
 def clean_text(text):
     # Remove excessive whitespace and control characters
@@ -18,8 +18,8 @@ def is_common_footer(text):
     return is_page_number(text) or is_date(text) or 'copyright' in text.lower()
 
 def has_heading_number(text):
-    # Only match section numbers like 1., 1.1, 2.3.4, 1.1.
-    return int(bool(re.match(r'^(\d+\.)+(\d+)?\s*$', text.strip())))
+    # Match section numbers like 1., 1.1, 2.3.4, 1.1. followed by text
+    return int(bool(re.match(r'^(\d+\.)+(\d+)?\s+', text.strip())))
 
 def is_title_case(text):
     words = text.split()
@@ -73,4 +73,11 @@ def extract_features(span, all_spans=None):
     ]
 
 def load_heading_model(model_path):
-    return load(model_path) 
+    # Return None if model doesn't exist
+    if os.path.exists(model_path):
+        try:
+            from joblib import load
+            return load(model_path)
+        except:
+            return None
+    return None 
